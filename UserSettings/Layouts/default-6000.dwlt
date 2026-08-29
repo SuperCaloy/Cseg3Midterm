@@ -357,8 +357,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "UnityEditor.MainToolbarWindow\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 37
-    y: 54
+    x: 0
+    y: 0
     width: 1882
     height: 36
   m_SerializedDataModeController:
@@ -661,8 +661,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Project\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 37
-    y: 747
+    x: 0
+    y: 681
     width: 1503
     height: 238
   m_SerializedDataModeController:
@@ -713,10 +713,8 @@ MonoBehaviour:
       m_Data: 53050
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 46906
-    - m_Data: 47238
-    - m_Data: 1000000000
-    - m_Data: 2147483647
+    - m_Data: 56044
+    - m_Data: 56046
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -749,7 +747,8 @@ MonoBehaviour:
       m_Data: 0
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 46906
+    - m_Data: 56044
+    - m_Data: 56046
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -834,8 +833,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Inspector\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 1541
-    y: 90
+    x: 1505
+    y: 24
     width: 377
     height: 895
   m_SerializedDataModeController:
@@ -885,8 +884,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Hierarchy\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 37
-    y: 90
+    x: 0
+    y: 24
     width: 370
     height: 631
   m_SerializedDataModeController:
@@ -905,10 +904,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs:
-      - m_Data: 51474
+      m_SelectedIDs: []
       m_LastClickedID:
-        m_Data: 51474
+        m_Data: 0
       m_ExpandedIDs:
       - m_Data: -52600
       - m_Data: -38370
@@ -975,8 +973,8 @@ MonoBehaviour:
     m_TextWithWhitespace: "Scene\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 408
-    y: 90
+    x: 372
+    y: 24
     width: 1131
     height: 631
   m_SerializedDataModeController:
@@ -1487,7 +1485,7 @@ MonoBehaviour:
   m_Rotation:
     m_Target: {x: -0.04071135, y: -0.94323826, z: 0.30454883, w: -0.12609434}
     speed: 2
-    m_Value: {x: -0.04071124, y: -0.9432357, z: 0.304548, w: -0.126094}
+    m_Value: {x: 0.04071135, y: 0.9432382, z: -0.3045488, w: 0.12609434}
   m_Size:
     m_Target: 6.552522
     speed: 2

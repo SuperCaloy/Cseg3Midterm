@@ -75,3 +75,11 @@ notes/
 
 # Agent instructions (local, not for sharing)
 AGENTS.md
+
+# Additional IDE and Editor Settings
+[Uu]ser[Ss]ettings/
+.idea/
+.vscode/
+
+# Node modules
+node_modules/
