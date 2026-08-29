@@ -8,75 +8,77 @@ public class PlayerController : MonoBehaviour
     public float jumpHeight = 1.2f;
     public float gravity = -19.62f;
     public float kickStrength = 8f;
-    // Added the missing semicolon below
     public float upwardLift = 2f;
 
     private CharacterController charController;
+    private Animator animator;
     private Vector3 currentVelocity;
 
     void Start()
     {
         charController = GetComponent<CharacterController>();
+
+        // Find Animator on this object or any child mesh
+        animator = GetComponentInChildren<Animator>();
     }
 
     void Update()
     {
-        // Ground check to reset downward velocity
-        if (charController.isGrounded && currentVelocity.y < 0f)
+        // 1. Ground Check & Jumping
+        if (charController.isGrounded)
         {
-            currentVelocity.y = -2f;
-        }
-        Debug.Log("Grounded: " + charController.isGrounded);
+            // Reset downward velocity when touching the ground
+            if (currentVelocity.y < 0f)
+            {
+                currentVelocity.y = -2f;
+            }
 
-        // Gather WASD or Arrow Key input
+            // Fire jump physics and animation trigger
+            if (Input.GetButtonDown("Jump"))
+            {
+                currentVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+
+                if (animator != null)
+                {
+                    animator.SetTrigger("Jump");
+                }
+            }
+        }
+
+        // 2. Apply Gravity & Vertical Movement
+        currentVelocity.y += gravity * Time.deltaTime;
+        charController.Move(currentVelocity * Time.deltaTime);
+
+        // 3. Horizontal Movement
         float inputX = Input.GetAxisRaw("Horizontal");
         float inputZ = Input.GetAxisRaw("Vertical");
 
         Vector3 moveDirection = (transform.right * inputX + transform.forward * inputZ).normalized;
 
-        // Check for run input
-        float currentSpeed = walkSpeed;
-        if (Input.GetKey(KeyCode.LeftShift))
-        {
-            currentSpeed = runSpeed;
-        }
-
-        // Apply horizontal movement
+        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
         charController.Move(moveDirection * currentSpeed * Time.deltaTime);
 
-        // Check for jump input
-        if (Input.GetKeyDown(KeyCode.Space) && charController.isGrounded)
+        // 4. Update Animator Movement Parameter
+        if (animator != null)
         {
-            // Physics formula for calculating jump velocity
-            currentVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            bool isMoving = moveDirection.magnitude > 0.1f;
+            animator.SetBool("isWalking", isMoving);
         }
-
-        // Apply gravity to vertical movement
-        currentVelocity.y += gravity * Time.deltaTime;
-        charController.Move(currentVelocity * Time.deltaTime);
-    } // Added the missing closing brace here for the Update function
+    }
 
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        // Check if the object we bumped into has a physics Rigidbody
         Rigidbody rb = hit.collider.attachedRigidbody;
 
         if (rb != null && !rb.isKinematic)
         {
-            // Only kick objects that have the Ball tag
             if (hit.gameObject.CompareTag("Ball"))
             {
-                // Calculate the direction to push the ball based on position
                 Vector3 pushDirection = hit.gameObject.transform.position - transform.position;
-
-                // Keep the initial push strictly horizontal
                 pushDirection.y = 0f;
                 pushDirection.Normalize();
-
-                // Add the upward lift to make it fly a little high
                 pushDirection.y = upwardLift;
 
-                // Apply the physical force to the ball
                 rb.AddForce(pushDirection * kickStrength);
             }
         }
