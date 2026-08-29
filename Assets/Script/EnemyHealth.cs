@@ -16,6 +16,15 @@ public class EnemyHealth : MonoBehaviour
 
     void Start()
     {
+        // Ensure the enemy has a collider so it can be hit by bullets
+        if (GetComponent<Collider>() == null)
+        {
+            CapsuleCollider col = gameObject.AddComponent<CapsuleCollider>();
+            col.height = 2f;
+            col.radius = 0.5f;
+            col.center = new Vector3(0, 1f, 0); // Typically centers the capsule on a standard humanoid model
+        }
+
         currentHealth = maxHealth;
         mainCamera = Camera.main;
 

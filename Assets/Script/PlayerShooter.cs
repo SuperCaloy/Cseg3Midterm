@@ -20,10 +20,19 @@ public class PlayerShooter : MonoBehaviour
     public Texture2D crosshairTexture;
     public float crosshairSize = 32f;
 
+    [Header("Ammo & Color")]
+    public int totalAmmo = 240;
+    public int clipSize = 30;
+    public int currentAmmo;
+    public bool isReloading = false;
+    public Color[] availableColors = new Color[] { Color.red, Color.blue, Color.green, Color.yellow };
+    public int selectedColorIndex = 0;
+
     private bool showCrosshair = false;
 
     void Start()
     {
+        currentAmmo = clipSize;
         if (playerCamera == null)
         {
             playerCamera = Camera.main;
@@ -32,6 +41,8 @@ public class PlayerShooter : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f) return; // Prevent any interaction when the game is over/paused
+
         if (Input.GetMouseButton(1))
         {
             if (playerCamera != null)
@@ -49,11 +60,49 @@ public class PlayerShooter : MonoBehaviour
             showCrosshair = false;
         }
 
-        if (Input.GetMouseButton(0) && Time.time >= nextFireTime)
+        // Color Selection Input
+        if (Input.GetKeyDown(KeyCode.Alpha1)) selectedColorIndex = 0;
+        if (Input.GetKeyDown(KeyCode.Alpha2)) selectedColorIndex = 1;
+        if (Input.GetKeyDown(KeyCode.Alpha3)) selectedColorIndex = 2;
+        if (Input.GetKeyDown(KeyCode.Alpha4)) selectedColorIndex = 3;
+
+        // Ensure index is valid
+        if (selectedColorIndex >= availableColors.Length) selectedColorIndex = availableColors.Length - 1;
+
+        if (isReloading) return; // Cannot shoot or reload while reloading
+
+        // Reload Input
+        if (Input.GetKeyDown(KeyCode.R) && currentAmmo < clipSize)
+        {
+            StartCoroutine(ReloadCoroutine());
+        }
+
+        if (Input.GetMouseButton(0) && Time.time >= nextFireTime && currentAmmo > 0)
         {
             nextFireTime = Time.time + fireRate;
             Shoot();
         }
+        else if (Input.GetMouseButton(0) && currentAmmo <= 0 && !isReloading)
+        {
+            // Auto-reload if clicking while empty
+            StartCoroutine(ReloadCoroutine());
+        }
+    }
+
+    System.Collections.IEnumerator ReloadCoroutine()
+    {
+        if (totalAmmo <= 0 || currentAmmo == clipSize) yield break;
+
+        isReloading = true;
+        yield return new WaitForSeconds(1f);
+        
+        int ammoNeeded = clipSize - currentAmmo;
+        int ammoToReload = Mathf.Min(ammoNeeded, totalAmmo);
+
+        currentAmmo += ammoToReload;
+        totalAmmo -= ammoToReload;
+        
+        isReloading = false;
     }
 
     void OnGUI()
@@ -68,6 +117,8 @@ public class PlayerShooter : MonoBehaviour
 
     void Shoot()
     {
+        currentAmmo--;
+
         if (bulletPrefab != null && firePoint != null)
         {
             Vector3 shootDirection = firePoint.forward;
@@ -88,6 +139,12 @@ public class PlayerShooter : MonoBehaviour
 
             GameObject bullet = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(shootDirection));
             Rigidbody rb = bullet.GetComponent<Rigidbody>();
+            
+            Bullet bulletScript = bullet.GetComponent<Bullet>();
+            if (bulletScript != null)
+            {
+                bulletScript.SetColor(availableColors[selectedColorIndex]);
+            }
 
             if (rb != null)
             {

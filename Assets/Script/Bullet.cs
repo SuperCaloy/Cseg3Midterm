@@ -10,9 +10,6 @@ public class Bullet : MonoBehaviour
     private Rigidbody rb;
     private Color myColor;
 
-    // This global shared ammo color
-    public static Color globalAmmoColor = Color.white;
-
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -20,10 +17,12 @@ public class Bullet : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.linearDamping = 0f;
 
-        // Generate a completely random vibrant color so every bullet and hit is unique!
-        myColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
-        globalAmmoColor = myColor; // Update next shot too
+        Destroy(gameObject, lifeTime);
+    }
 
+    public void SetColor(Color color)
+    {
+        myColor = color;
         Renderer bulletRenderer = GetComponent<Renderer>();
         if (bulletRenderer != null)
         {
@@ -33,8 +32,6 @@ public class Bullet : MonoBehaviour
                 bulletRenderer.material.SetColor("_BaseColor", myColor);
             }
         }
-
-        Destroy(gameObject, lifeTime);
     }
 
     void FixedUpdate()
@@ -47,7 +44,9 @@ public class Bullet : MonoBehaviour
         }
     }
 
- void OnCollisionEnter(Collision collision)
+    public float damage = 20f; // Player bullet damage
+
+    void OnCollisionEnter(Collision collision)
     {
         GameObject hitObject = collision.gameObject;
 
@@ -56,16 +55,30 @@ public class Bullet : MonoBehaviour
             EnemyHealth enemy = hitObject.GetComponent<EnemyHealth>();
             if (enemy != null)
             {
-                enemy.TakeDamage(10f); // adjust damage per bullet
+                enemy.TakeDamage(damage); 
             }
         }
         else if (hitObject.CompareTag("Obstacle"))
         {
-            Renderer hitRenderer = hitObject.GetComponent<Renderer>();
-            if (hitRenderer != null)
+            // If it's a compound object (like our primitive furniture), find the root
+            Transform rootObstacle = hitObject.transform;
+            if (hitObject.transform.parent != null && hitObject.transform.parent.CompareTag("Obstacle"))
             {
-                Color randomColor = new Color(Random.value, Random.value, Random.value);
-                hitRenderer.material.color = randomColor;
+                rootObstacle = hitObject.transform.parent;
+            }
+
+            // Color all renderers in this compound object
+            Renderer[] renderers = rootObstacle.GetComponentsInChildren<Renderer>();
+            foreach (Renderer r in renderers)
+            {
+                if (r != null) r.material.color = myColor;
+            }
+            
+            // Notify ObjectiveManager using the root parent
+            ObjectiveManager objManager = FindObjectOfType<ObjectiveManager>();
+            if (objManager != null)
+            {
+                objManager.OnObjectColored(rootObstacle.gameObject, myColor);
             }
         }
 

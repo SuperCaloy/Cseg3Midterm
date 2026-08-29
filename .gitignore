@@ -83,3 +83,4 @@ AGENTS.md
 
 # Node modules
 node_modules/
+.agents

@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 public class MainMenu : MonoBehaviour
 {
     [Tooltip("Exact name of your gameplay scene.")]
-    public string gameSceneName = "Game";
+    public string gameSceneName = "Level1";
 
     public void PlayGame()
     {
