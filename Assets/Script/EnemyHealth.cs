@@ -61,6 +61,11 @@ public class EnemyHealth : MonoBehaviour
 
     void Die()
     {
+        GameManager gm = FindObjectOfType<GameManager>();
+        if (gm != null)
+        {
+            gm.AddKill();
+        }
         Destroy(gameObject);
     }
 }

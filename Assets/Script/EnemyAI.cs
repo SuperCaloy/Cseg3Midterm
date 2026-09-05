@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class EnemyAI : MonoBehaviour
 {
+    public enum CombatType { Ranged, Melee }
+    public CombatType combatType = CombatType.Ranged;
+
     public Transform player;
     public float speed = 1.5f; // Slowness
     public float stoppingDistance = 5f;
@@ -12,9 +15,12 @@ public class EnemyAI : MonoBehaviour
     public float fireRate = 2f;
     private float nextFireTime;
 
+    public float bulletDamage = 10f;
+    public float bulletSpeed = 20f;
     public bool canShoot = true;
     
     private Rigidbody rb;
+    private ProceduralAnimator anim;
 
     void Start()
     {
@@ -30,7 +36,28 @@ public class EnemyAI : MonoBehaviour
             rb = gameObject.AddComponent<Rigidbody>();
         }
         rb.freezeRotation = true; // prevent falling over
-        rb.isKinematic = false; // Fix warning about setting linearVelocity on kinematic body
+        rb.isKinematic = false; 
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+        anim = GetComponent<ProceduralAnimator>();
+
+        // Set stopping distance based on combat type
+        if (combatType == CombatType.Melee)
+        {
+            stoppingDistance = 1.5f;
+            canShoot = false;
+        }
+
+        // Scale difficulty with Stage
+        if (GameSessionManager.Instance != null)
+        {
+            int stage = GameSessionManager.Instance.CurrentStage;
+            float multiplier = Mathf.Pow(1.2f, stage - 1); // 20% harder per stage
+            
+            speed *= multiplier;
+            fireRate = Mathf.Max(0.5f, fireRate / multiplier);
+            bulletDamage *= multiplier;
+        }
     }
 
     void FixedUpdate()
@@ -43,39 +70,135 @@ public class EnemyAI : MonoBehaviour
         // Look at player
         Vector3 direction = (player.position - transform.position).normalized;
         direction.y = 0; // Keep horizontal
-        if (direction != Vector3.zero)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * 5f);
-        }
-
         if (distanceToPlayer > stoppingDistance)
         {
-            // Move using physics so we don't pass through walls
+            // Boids-style Obstacle Avoidance (Raycast Steering) + Jumping
+            Vector3 desiredDir = direction;
+            float rayDist = 2.5f; // Look ahead distance
+            
+            // Check if there's a wall directly in front (Low ray for jumping, Mid ray for steering)
+            bool hitLow = Physics.Raycast(transform.position + Vector3.up * 0.5f, transform.forward, out RaycastHit lowHit, rayDist);
+            bool hitMid = Physics.Raycast(transform.position + Vector3.up * 1.5f, transform.forward, out RaycastHit midHit, rayDist);
+            
+            if (hitLow || hitMid)
+            {
+                RaycastHit hit = hitMid ? midHit : lowHit;
+                if (!hit.transform.CompareTag("Player") && !hit.transform.CompareTag("Enemy"))
+                {
+                    // If we hit something low, but NOT something mid-height, it's a short obstacle! We can jump it.
+                    if (hitLow && !hitMid && IsGrounded())
+                    {
+                        rb.AddForce(Vector3.up * 5f, ForceMode.Impulse); // Small jump
+                    }
+                    else
+                    {
+                        // It's a tall wall! Try to steer left or right
+                        Vector3 leftRay = Quaternion.Euler(0, -45, 0) * transform.forward;
+                        Vector3 rightRay = Quaternion.Euler(0, 45, 0) * transform.forward;
+                        
+                        bool hitLeft = Physics.Raycast(transform.position + Vector3.up * 1f, leftRay, rayDist);
+                        bool hitRight = Physics.Raycast(transform.position + Vector3.up * 1f, rightRay, rayDist);
+                        
+                        if (!hitLeft && hitRight)
+                        {
+                            desiredDir = leftRay; // Steer left
+                        }
+                        else if (hitLeft && !hitRight)
+                        {
+                            desiredDir = rightRay; // Steer right
+                        }
+                        else if (!hitLeft && !hitRight)
+                        {
+                            // Both open, pick the one closer to player
+                            float dLeft = Vector3.Distance(transform.position + leftRay * rayDist, player.position);
+                            float dRight = Vector3.Distance(transform.position + rightRay * rayDist, player.position);
+                            desiredDir = dLeft < dRight ? leftRay : rightRay;
+                        }
+                        else 
+                        {
+                            // Both blocked, just turn around or try perpendicular
+                            desiredDir = Quaternion.Euler(0, 90, 0) * transform.forward;
+                        }
+                    }
+                }
+            }
+
+            // Smoothly rotate towards desired direction (avoidance or player)
+            if (desiredDir != Vector3.zero)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(desiredDir), Time.deltaTime * 5f);
+            }
+
+            // Move forward based on current rotation (so we actually move where we steer)
             Vector3 moveVelocity = transform.forward * speed;
             moveVelocity.y = rb.linearVelocity.y; // maintain gravity
             rb.linearVelocity = moveVelocity;
         }
         else
         {
-            // Stop moving
+            // Stop moving but keep looking at player
+            if (direction != Vector3.zero)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * 5f);
+            }
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
+
+            // Melee Attack Logic
+            if (combatType == CombatType.Melee && Time.time >= nextFireTime)
+            {
+                PunchPlayer();
+                nextFireTime = Time.time + fireRate;
+            }
         }
 
-        // Always shoot if canShoot (even while following)
-        if (canShoot && Time.time >= nextFireTime)
+        // Ranged Attack Logic
+        if (combatType == CombatType.Ranged && canShoot && Time.time >= nextFireTime)
         {
-            Shoot();
-            nextFireTime = Time.time + fireRate;
+            if (HasLineOfSight())
+            {
+                Shoot();
+                nextFireTime = Time.time + fireRate;
+            }
         }
     }
 
-    public float bulletDamage = 10f;
-    public float bulletSpeed = 20f;
+    void PunchPlayer()
+    {
+        if (anim != null) anim.Punch();
+
+        // Deal damage
+        PlayerHealth ph = player.GetComponent<PlayerHealth>();
+        if (ph != null)
+        {
+            ph.TakeDamage(bulletDamage * 1.5f); // Melee hits harder
+        }
+    }
+
+    bool HasLineOfSight()
+    {
+        if (player == null) return false;
+        
+        Vector3 rayStart = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.5f + transform.forward;
+        Vector3 rayEnd = player.position + Vector3.up * 1.5f;
+        Vector3 direction = rayEnd - rayStart;
+        float distance = direction.magnitude;
+
+        if (Physics.Raycast(rayStart, direction.normalized, out RaycastHit hit, distance))
+        {
+            if (hit.transform == player || hit.transform.CompareTag("Player"))
+            {
+                return true; 
+            }
+            return false; 
+        }
+        
+        return true; 
+    }
 
     void Shoot()
     {
         Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.5f + transform.forward;
-        Vector3 shootDir = (player.position + Vector3.up * 1.5f - spawnPos).normalized; // Aim slightly up at body
+        Vector3 shootDir = (player.position + Vector3.up * 1.5f - spawnPos).normalized; 
         
         GameObject bullet;
         if (enemyBulletPrefab != null)
@@ -84,7 +207,6 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            // Auto-generate a simple bullet if the user hasn't assigned a prefab
             bullet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bullet.transform.position = spawnPos;
             bullet.transform.localScale = Vector3.one * 0.5f;
@@ -96,20 +218,24 @@ public class EnemyAI : MonoBehaviour
         if (eb == null) eb = bullet.AddComponent<EnemyBullet>();
         eb.damage = bulletDamage;
         
-        // Ensure there is a Collider for OnCollisionEnter to work
         if (bullet.GetComponent<Collider>() == null)
         {
             bullet.AddComponent<SphereCollider>();
         }
 
-        Rigidbody rb = bullet.GetComponent<Rigidbody>();
-        if (rb == null) rb = bullet.AddComponent<Rigidbody>();
+        Rigidbody rbBullet = bullet.GetComponent<Rigidbody>();
+        if (rbBullet == null) rbBullet = bullet.AddComponent<Rigidbody>();
         
-        if (rb != null)
+        if (rbBullet != null)
         {
-            rb.useGravity = false;
-            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // Prevent tunneling through the player
-            rb.linearVelocity = shootDir * bulletSpeed; // Configurable Bullet speed
+            rbBullet.useGravity = false;
+            rbBullet.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rbBullet.linearVelocity = shootDir * bulletSpeed; 
         }
+    }
+    
+    private bool IsGrounded()
+    {
+        return Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 0.2f);
     }
 }

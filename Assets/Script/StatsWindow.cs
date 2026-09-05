@@ -4,34 +4,65 @@ using UnityEngine.SceneManagement;
 
 public class StatsWindow : MonoBehaviour
 {
-    public ObjectiveManager objectiveManager;
     public GameManager gameManager;
     public PlayerShooter playerShooter;
-
     public TextMeshProUGUI statsText;
-    public string nextSceneName = "Level2";
 
     void OnEnable()
     {
-        if (objectiveManager != null && gameManager != null && playerShooter != null)
+        if (gameManager != null)
         {
-            int correct = objectiveManager.CorrectColors;
-            int incorrect = objectiveManager.IncorrectColors;
             float time = Mathf.Max(0, gameManager.TimeLeft);
-            int ammo = playerShooter.currentAmmo + playerShooter.totalAmmo;
+            
+            int stageEnemiesKilled = gameManager.EnemiesKilledInStage;
+            int totalEnemiesKilled = GameSessionManager.Instance != null ? GameSessionManager.Instance.TotalEnemiesKilled : stageEnemiesKilled;
+            int totalShotsFired = GameSessionManager.Instance != null ? GameSessionManager.Instance.TotalShotsFired : 0;
+            int totalAmmoPickedUp = GameSessionManager.Instance != null ? GameSessionManager.Instance.TotalAmmoPickedUp : 0;
 
-            statsText.text = $"Level Complete!\n\n" +
-                             $"Correct Objects: {correct}\n" +
-                             $"Incorrect Objects: {incorrect}\n" +
-                             $"Remaining Time: {time:F1}s\n" +
-                             $"Remaining Ammo: {ammo}\n\n" +
-                             $"Final Score: {(correct * 100) - (incorrect * 50) + (ammo * 10) + Mathf.CeilToInt(time * 5)}\n\n" +
-                             $"Press [ENTER] to continue";
+            if (statsText != null)
+            {
+                statsText.text = $"Stage Complete!\n\n" +
+                                 $"Stage Enemies Killed: {stageEnemiesKilled}\n" +
+                                 $"Total Enemies Killed: {totalEnemiesKilled}\n" +
+                                 $"Total Shots Fired: {totalShotsFired}\n" +
+                                 $"Total Ammo Picked Up: {totalAmmoPickedUp}\n" +
+                                 $"Remaining Time: {time:F1}s\n\n" +
+                                 $"Press [ENTER] to continue";
+            }
+        }
+    }
+
+    private bool isLoading = false;
+
+    void Update()
+    {
+        if (!isLoading && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
+        {
+            NextLevel();
         }
     }
 
     public void NextLevel()
     {
-        SceneManager.LoadScene(nextSceneName);
+        if (isLoading) return;
+        isLoading = true;
+        if (GameSessionManager.Instance != null)
+        {
+            GameSessionManager.Instance.NextStage();
+            int nextStage = GameSessionManager.Instance.CurrentStage;
+            if (nextStage <= 4)
+            {
+                SceneManager.LoadScene("Level" + nextStage);
+            }
+            else
+            {
+                // Game finished
+                SceneManager.LoadScene("MainMenu");
+            }
+        }
+        else
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
     }
 }

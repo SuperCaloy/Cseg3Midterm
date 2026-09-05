@@ -6,20 +6,31 @@ public class GameUIManager : MonoBehaviour
     public GameManager gameManager;
     public PlayerShooter playerShooter;
     public PlayerHealth playerHealth;
-    public ObjectiveManager objectiveManager;
 
     [Header("HUD")]
     public TextMeshProUGUI timerText;
     public TextMeshProUGUI ammoText;
     public TextMeshProUGUI healthText;
     public TextMeshProUGUI reloadingText;
-    public TextMeshProUGUI objectivesText;
-    public UnityEngine.UI.Image colorIndicator;
+    public TextMeshProUGUI objectivesText; // We'll repurpose this for "Enemies Killed"
+    
     public GameObject loseWindow;
     public GameObject winWindow;
 
+    public TextMeshProUGUI notificationText;
+    private float notificationTimer = 0f;
+
     void Update()
     {
+        if (notificationTimer > 0)
+        {
+            notificationTimer -= Time.deltaTime;
+            if (notificationTimer <= 0 && notificationText != null)
+            {
+                notificationText.gameObject.SetActive(false);
+            }
+        }
+
         if (gameManager != null)
         {
             if (timerText != null)
@@ -44,6 +55,12 @@ public class GameUIManager : MonoBehaviour
                 StatsWindow sw = winWindow.GetComponent<StatsWindow>();
                 if (sw != null) sw.NextLevel();
             }
+            
+            if (objectivesText != null)
+            {
+                int target = GameSessionManager.Instance != null ? GameSessionManager.Instance.TargetEnemiesForCurrentStage : 5;
+                objectivesText.text = $"<b>OBJECTIVE:</b>\nKill Enemies: {gameManager.EnemiesKilledInStage} / {target}";
+            }
         }
 
         if (playerHealth != null && healthText != null)
@@ -51,34 +68,15 @@ public class GameUIManager : MonoBehaviour
             healthText.text = "Health: " + Mathf.CeilToInt(playerHealth.currentHealth);
         }
 
-        if (objectiveManager != null && objectivesText != null)
-        {
-            objectivesText.text = objectiveManager.GetObjectivesText();
-        }
-
         if (playerShooter != null)
         {
             if (ammoText != null)
             {
-                Color c = Color.white;
-                if (playerShooter.availableColors != null && playerShooter.availableColors.Length > playerShooter.selectedColorIndex)
-                {
-                    c = playerShooter.availableColors[playerShooter.selectedColorIndex];
-                }
-                string colorHex = ColorUtility.ToHtmlStringRGB(c);
-                ammoText.text = $"<color=#{colorHex}>[■]</color> Ammo: {playerShooter.currentAmmo} / {playerShooter.totalAmmo}";
+                ammoText.text = $"Ammo: {playerShooter.currentAmmo} / {playerShooter.totalAmmo}";
             }
 
             if (reloadingText != null)
                 reloadingText.gameObject.SetActive(playerShooter.isReloading);
-
-            if (colorIndicator != null)
-            {
-                if (playerShooter.availableColors != null && playerShooter.availableColors.Length > playerShooter.selectedColorIndex)
-                {
-                    colorIndicator.color = playerShooter.availableColors[playerShooter.selectedColorIndex];
-                }
-            }
         }
     }
 
@@ -90,5 +88,15 @@ public class GameUIManager : MonoBehaviour
     public void QuitToMenu()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene("Main Menu"); // Adjust name if different
+    }
+
+    public void ShowNotification(string message)
+    {
+        if (notificationText != null)
+        {
+            notificationText.text = message;
+            notificationText.gameObject.SetActive(true);
+            notificationTimer = 3f;
+        }
     }
 }

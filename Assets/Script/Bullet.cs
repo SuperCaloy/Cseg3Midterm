@@ -6,9 +6,9 @@ public class Bullet : MonoBehaviour
     [Header("Bullet Settings")]
     public float lifeTime = 3f;
     public float gravityMultiplier = 1.5f;
+    public float damage = 20f;
 
     private Rigidbody rb;
-    private Color myColor;
 
     void Start()
     {
@@ -18,20 +18,6 @@ public class Bullet : MonoBehaviour
         rb.linearDamping = 0f;
 
         Destroy(gameObject, lifeTime);
-    }
-
-    public void SetColor(Color color)
-    {
-        myColor = color;
-        Renderer bulletRenderer = GetComponent<Renderer>();
-        if (bulletRenderer != null)
-        {
-            bulletRenderer.material.color = myColor;
-            if (bulletRenderer.material.HasProperty("_BaseColor"))
-            {
-                bulletRenderer.material.SetColor("_BaseColor", myColor);
-            }
-        }
     }
 
     void FixedUpdate()
@@ -44,8 +30,6 @@ public class Bullet : MonoBehaviour
         }
     }
 
-    public float damage = 20f; // Player bullet damage
-
     void OnCollisionEnter(Collision collision)
     {
         GameObject hitObject = collision.gameObject;
@@ -55,30 +39,18 @@ public class Bullet : MonoBehaviour
             EnemyHealth enemy = hitObject.GetComponent<EnemyHealth>();
             if (enemy != null)
             {
-                enemy.TakeDamage(damage); 
-            }
-        }
-        else if (hitObject.CompareTag("Obstacle"))
-        {
-            // If it's a compound object (like our primitive furniture), find the root
-            Transform rootObstacle = hitObject.transform;
-            if (hitObject.transform.parent != null && hitObject.transform.parent.CompareTag("Obstacle"))
-            {
-                rootObstacle = hitObject.transform.parent;
-            }
-
-            // Color all renderers in this compound object
-            Renderer[] renderers = rootObstacle.GetComponentsInChildren<Renderer>();
-            foreach (Renderer r in renderers)
-            {
-                if (r != null) r.material.color = myColor;
-            }
-            
-            // Notify ObjectiveManager using the root parent
-            ObjectiveManager objManager = FindObjectOfType<ObjectiveManager>();
-            if (objManager != null)
-            {
-                objManager.OnObjectColored(rootObstacle.gameObject, myColor);
+                // Headshot multiplier!
+                // Enemy pivot is at feet (y = 0), head is near y = 2.0
+                float impactHeight = collision.contacts[0].point.y - hitObject.transform.position.y;
+                float finalDamage = damage;
+                
+                if (impactHeight > 1.5f)
+                {
+                    finalDamage *= 2.0f; // 2x Headshot!
+                    Debug.Log("Headshot! Damage: " + finalDamage);
+                }
+                
+                enemy.TakeDamage(finalDamage); 
             }
         }
 

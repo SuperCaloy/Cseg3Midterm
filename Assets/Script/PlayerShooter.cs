@@ -20,28 +20,70 @@ public class PlayerShooter : MonoBehaviour
     public Texture2D crosshairTexture;
     public float crosshairSize = 32f;
 
-    [Header("Ammo & Color")]
-    public int totalAmmo = 240;
+    [Header("Ammo")]
+    public int totalAmmo = 60; // Reduced so pickups matter
     public int clipSize = 30;
     public int currentAmmo;
     public bool isReloading = false;
-    public Color[] availableColors = new Color[] { Color.red, Color.blue, Color.green, Color.yellow };
-    public int selectedColorIndex = 0;
 
     private bool showCrosshair = false;
 
     void Start()
     {
+        // The user requested ammo to explicitly reset per level instead of carrying over
+        totalAmmo = 60;
         currentAmmo = clipSize;
+        
+        if (GameSessionManager.Instance != null)
+        {
+            GameSessionManager.Instance.PlayerTotalAmmo = totalAmmo;
+            GameSessionManager.Instance.PlayerCurrentAmmo = currentAmmo;
+        }
+
         if (playerCamera == null)
         {
             playerCamera = Camera.main;
+        }
+
+        ApplyGunMaterial();
+    }
+
+    private void ApplyGunMaterial()
+    {
+        Material gunMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (gunMat == null || gunMat.shader.name == "Hidden/InternalErrorShader") 
+            gunMat = new Material(Shader.Find("Standard"));
+            
+        gunMat.color = new Color(0.15f, 0.15f, 0.15f);
+        if (gunMat.HasProperty("_Metallic")) gunMat.SetFloat("_Metallic", 0.9f);
+        if (gunMat.HasProperty("_Smoothness")) gunMat.SetFloat("_Smoothness", 0.5f);
+
+        Renderer[] allRenderers = GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer r in allRenderers)
+        {
+            string n = r.gameObject.name.ToLower();
+            if (n.Contains("assault") || n.Contains("rifle") || n.Contains("gun") || n.Contains("weapon") || n.Contains("smg") || n.Contains("silencer") || n.Contains("suppressor") || n.Contains("muzzle"))
+            {
+                Material[] newMats = new Material[r.materials.Length];
+                for (int i = 0; i < newMats.Length; i++)
+                {
+                    newMats[i] = gunMat;
+                }
+                r.materials = newMats;
+            }
         }
     }
 
     void Update()
     {
         if (Time.timeScale == 0f) return; // Prevent any interaction when the game is over/paused
+
+        // Keep session manager synced
+        if (GameSessionManager.Instance != null)
+        {
+            GameSessionManager.Instance.PlayerTotalAmmo = totalAmmo;
+            GameSessionManager.Instance.PlayerCurrentAmmo = currentAmmo;
+        }
 
         if (Input.GetMouseButton(1))
         {
@@ -59,15 +101,6 @@ public class PlayerShooter : MonoBehaviour
             }
             showCrosshair = false;
         }
-
-        // Color Selection Input
-        if (Input.GetKeyDown(KeyCode.Alpha1)) selectedColorIndex = 0;
-        if (Input.GetKeyDown(KeyCode.Alpha2)) selectedColorIndex = 1;
-        if (Input.GetKeyDown(KeyCode.Alpha3)) selectedColorIndex = 2;
-        if (Input.GetKeyDown(KeyCode.Alpha4)) selectedColorIndex = 3;
-
-        // Ensure index is valid
-        if (selectedColorIndex >= availableColors.Length) selectedColorIndex = availableColors.Length - 1;
 
         if (isReloading) return; // Cannot shoot or reload while reloading
 
@@ -118,6 +151,10 @@ public class PlayerShooter : MonoBehaviour
     void Shoot()
     {
         currentAmmo--;
+        if (GameSessionManager.Instance != null)
+        {
+            GameSessionManager.Instance.AddShotFired();
+        }
 
         if (bulletPrefab != null && firePoint != null)
         {
@@ -139,12 +176,6 @@ public class PlayerShooter : MonoBehaviour
 
             GameObject bullet = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(shootDirection));
             Rigidbody rb = bullet.GetComponent<Rigidbody>();
-            
-            Bullet bulletScript = bullet.GetComponent<Bullet>();
-            if (bulletScript != null)
-            {
-                bulletScript.SetColor(availableColors[selectedColorIndex]);
-            }
 
             if (rb != null)
             {
