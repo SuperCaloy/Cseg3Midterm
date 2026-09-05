@@ -467,6 +467,29 @@ public class ProceduralLevelGenerator : EditorWindow
         ltrt.anchorMax = Vector2.one;
         ltrt.sizeDelta = Vector2.zero;
 
+        // Pause Panel
+        GameObject pausePanelObj = new GameObject("PausePanel");
+        pausePanelObj.transform.SetParent(canvasObj.transform, false);
+        pausePanelObj.AddComponent<UnityEngine.UI.Image>().color = new Color(0, 0, 0, 0.85f);
+        RectTransform prt = pausePanelObj.GetComponent<RectTransform>();
+        prt.anchorMin = Vector2.zero;
+        prt.anchorMax = Vector2.one;
+        prt.sizeDelta = Vector2.zero;
+        pausePanelObj.SetActive(false);
+        uiManager.pauseWindow = pausePanelObj;
+        
+        GameObject pauseTextObj = new GameObject("PauseText");
+        pauseTextObj.transform.SetParent(pausePanelObj.transform, false);
+        var pauseText = pauseTextObj.AddComponent<TMPro.TextMeshProUGUI>();
+        pauseText.text = "PAUSED\n\n<size=24>Press ESC to Continue</size>\n<size=24>Press Q to Quit</size>";
+        pauseText.alignment = TMPro.TextAlignmentOptions.Center;
+        pauseText.fontSize = 48;
+        pauseText.color = Color.white;
+        RectTransform ptrt = pauseText.GetComponent<RectTransform>();
+        ptrt.anchorMin = Vector2.zero;
+        ptrt.anchorMax = Vector2.one;
+        ptrt.sizeDelta = Vector2.zero;
+
         // Find PlayerShooter and PlayerHealth on the player tag
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)

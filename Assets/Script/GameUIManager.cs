@@ -16,9 +16,26 @@ public class GameUIManager : MonoBehaviour
     
     public GameObject loseWindow;
     public GameObject winWindow;
+    public GameObject pauseWindow;
 
     public TextMeshProUGUI notificationText;
     private float notificationTimer = 0f;
+
+    public void PauseGame()
+    {
+        if (pauseWindow != null) pauseWindow.SetActive(true);
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    public void ResumeGame()
+    {
+        if (pauseWindow != null) pauseWindow.SetActive(false);
+        Time.timeScale = 1f;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
 
     void Update()
     {
@@ -43,6 +60,30 @@ public class GameUIManager : MonoBehaviour
             if (gameManager.CurrentState == GameState.Won && winWindow != null && !winWindow.activeSelf)
             {
                 winWindow.SetActive(true);
+            }
+
+            // Pause Menu Logic
+            if (gameManager.CurrentState == GameState.Playing && Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (pauseWindow != null)
+                {
+                    bool isPaused = pauseWindow.activeSelf;
+                    if (!isPaused)
+                    {
+                        PauseGame();
+                    }
+                    else
+                    {
+                        ResumeGame();
+                    }
+                }
+            }
+
+            // Quit to menu if paused and Q is pressed
+            if (pauseWindow != null && pauseWindow.activeSelf && Input.GetKeyDown(KeyCode.Q))
+            {
+                Time.timeScale = 1f; // Make sure time is running again before loading scene
+                QuitToMenu();
             }
 
             // Input handling for restarting / next level
@@ -87,7 +128,7 @@ public class GameUIManager : MonoBehaviour
 
     public void QuitToMenu()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("Main Menu"); // Adjust name if different
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu"); 
     }
 
     public void ShowNotification(string message)
