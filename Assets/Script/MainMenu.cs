@@ -8,12 +8,17 @@ public class MainMenu : MonoBehaviour
 
     public void PlayGame()
     {
-        SceneManager.LoadScene(gameSceneName);
+        SceneManager.LoadScene("CharacterSelection");
     }
 
     public void QuitGame()
     {
         Debug.Log("Quit requested");
         Application.Quit();
+    }
+
+    public void Exit()
+    {
+        QuitGame();
     }
 }
