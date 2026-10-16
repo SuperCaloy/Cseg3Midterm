@@ -50,7 +50,7 @@ public class StatsWindow : MonoBehaviour
         {
             GameSessionManager.Instance.NextStage();
             int nextStage = GameSessionManager.Instance.CurrentStage;
-            if (nextStage <= 4)
+            if (nextStage <= 6)
             {
                 SceneManager.LoadScene("Level" + nextStage);
             }

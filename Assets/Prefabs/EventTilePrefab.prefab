@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3004684921088839999}
   - component: {fileID: 3375063763995418246}
   - component: {fileID: 3780873097467872085}
-  - component: {fileID: 8108454777839538022}
+  - component: {fileID: -367365696246217320}
   m_Layer: 0
   m_Name: EventTilePrefab
   m_TagString: Untagged
@@ -113,7 +113,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &8108454777839538022
+--- !u!114 &-367365696246217320
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

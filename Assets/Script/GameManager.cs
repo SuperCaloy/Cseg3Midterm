@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         Time.timeScale = 1f;
+        Application.runInBackground = true;
         
         // Calculate maxTime based on target enemies and stage scaling
         if (GameSessionManager.Instance != null)

@@ -3,6 +3,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
+using Unity.AI.Navigation;
+using UnityEngine.AI;
 
 public class ProceduralLevelGenerator : EditorWindow
 {
@@ -50,7 +52,7 @@ public class ProceduralLevelGenerator : EditorWindow
             eventTilePrefab.GetComponent<Collider>().isTrigger = true;
         }
 
-        for (int level = 1; level <= 4; level++)
+        for (int level = 1; level <= 6; level++)
         {
             // Organic Earthy / Muddy Colors for realistic terrain
             Color floorBase = new Color(0.25f, 0.18f, 0.11f) * UnityEngine.Random.Range(0.8f, 1.2f);
@@ -166,6 +168,10 @@ public class ProceduralLevelGenerator : EditorWindow
                         floor.GetComponent<Renderer>().sharedMaterial = floorMat;
                         floorColliders.Add(floor.GetComponent<BoxCollider>());
 
+                        NavMeshModifier floorMod = floor.AddComponent<NavMeshModifier>();
+                        floorMod.overrideArea = true;
+                        floorMod.area = 0; // Walkable
+
                         // Grass Spawning
                         int grassCount = UnityEngine.Random.Range(5, 15);
                         for(int g = 0; g < grassCount; g++)
@@ -196,6 +202,14 @@ public class ProceduralLevelGenerator : EditorWindow
                                 {
                                     cover.transform.SetParent(environment.transform);
                                     cover.transform.position = pos;
+
+                                    NavMeshModifier obsMod = cover.AddComponent<NavMeshModifier>();
+                                    obsMod.overrideArea = true;
+                                    obsMod.area = 1; // Not Walkable
+
+                                    NavMeshObstacle obsComp = cover.AddComponent<NavMeshObstacle>();
+                                    obsComp.carving = true;
+                                    obsComp.carveOnlyStationary = true;
                                 }
                             }
                         }
@@ -220,6 +234,10 @@ public class ProceduralLevelGenerator : EditorWindow
                         wall.transform.position = pos + new Vector3(0, 6f, 0); // Center is half of 12f
                         wall.transform.localScale = new Vector3(tileSize, 12f, tileSize); // Tripled the height
                         wall.GetComponent<Renderer>().sharedMaterial = wallMat;
+
+                        NavMeshModifier wallMod = wall.AddComponent<NavMeshModifier>();
+                        wallMod.overrideArea = true;
+                        wallMod.area = 1; // 1 = Not Walkable
                         
                         // Vine Spawning
                         if (UnityEngine.Random.value < 0.2f)
@@ -241,6 +259,18 @@ public class ProceduralLevelGenerator : EditorWindow
             grassInstancer.grassMesh = grassMesh;
             grassInstancer.grassMaterial = grassMat;
             grassInstancer.Initialize(grassMatrices);
+
+            // Clean Floor-Only NavMeshSurface (strictly excludes walls and wall tops)
+            NavMeshSurface navSurface = environment.AddComponent<NavMeshSurface>();
+            navSurface.collectObjects = CollectObjects.Children;
+            navSurface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            navSurface.defaultArea = 0; // Walkable
+            navSurface.BuildNavMesh();
+
+            // Setup WaypointManager per map
+            WaypointManager wm = environment.AddComponent<WaypointManager>();
+            wm.targetWaypointCount = 10 + (level * 2);
+            wm.GenerateWaypoints();
 
             // Setup Spawners
             GameObject spawners = new GameObject("Spawners");
@@ -315,7 +345,7 @@ public class ProceduralLevelGenerator : EditorWindow
         // Finally, load Level 1 for the user to see
         EditorSceneManager.OpenScene("Assets/Scenes/Level1.unity", OpenSceneMode.Single);
 
-        Debug.Log("Procedural Campaign Generation Complete! Scenes Level1 to Level4 have been created and added to Build Settings.");
+        Debug.Log("Procedural Campaign Generation Complete! Scenes Level1 to Level6 have been created and added to Build Settings.");
     }
 
     private static void CleanupOldObjects()
@@ -1059,10 +1089,20 @@ public class ProceduralLevelGenerator : EditorWindow
             // Add Rigidbody and Colliders
             Rigidbody rootRb = root.AddComponent<Rigidbody>();
             rootRb.freezeRotation = true;
+            rootRb.isKinematic = true;
+
             CapsuleCollider cc = root.AddComponent<CapsuleCollider>();
             cc.center = new Vector3(0, 0.9f, 0);
             cc.height = 1.8f;
             cc.radius = 0.35f;
+
+            NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
+            agent.speed = (i == 3) ? 3.0f : 2.5f;
+            agent.stoppingDistance = (i == 3) ? 1.5f : 5.0f;
+            agent.acceleration = 12f;
+            agent.angularSpeed = 240f;
+            agent.radius = 0.35f;
+            agent.height = 1.8f;
 
             // Procedural Animator
             ProceduralAnimator anim = root.AddComponent<ProceduralAnimator>();

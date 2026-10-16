@@ -57,7 +57,7 @@ public class RandomSpawner : MonoBehaviour
                 // Raycast down to find floor
                 if (Physics.Raycast(testPos, Vector3.down, out RaycastHit hit, 20f))
                 {
-                    if (hit.collider.gameObject.name.Contains("Floor") || hit.collider.gameObject.name.Contains("Plane"))
+                    if (hit.collider.gameObject.name.Contains("Floor") || hit.collider.gameObject.name.Contains("Plane") || (spawnAreas != null && spawnAreas.Contains(hit.collider as BoxCollider)))
                     {
                         spawnPos = hit.point + Vector3.up * 1.0f; // float slightly above floor
                         foundPos = true;
@@ -87,8 +87,21 @@ public class RandomSpawner : MonoBehaviour
         if (foundPos)
         {
             GameObject chosenPrefab = prefabsToSpawn[Random.Range(0, prefabsToSpawn.Length)];
-            GameObject newObj = Instantiate(chosenPrefab, spawnPos, Quaternion.identity);
-            activeSpawns.Add(newObj);
+            if (chosenPrefab != null)
+            {
+                GameObject newObj = Instantiate(chosenPrefab, spawnPos, Quaternion.identity);
+                newObj.transform.SetParent(transform);
+                activeSpawns.Add(newObj);
+                Debug.Log($"RandomSpawner: Spawned {chosenPrefab.name} at {spawnPos}");
+            }
+            else
+            {
+                Debug.LogWarning("RandomSpawner: chosenPrefab is null!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("RandomSpawner: Could not find valid spawn position!");
         }
     }
 }
